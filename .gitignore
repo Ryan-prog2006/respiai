@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/audio/*.wav
+data/cycles/*.wav
+data/icbhi_dataset.zip
+*.log
+features/*.csv
+.DS_Store
+*.mp3
+*.ogg

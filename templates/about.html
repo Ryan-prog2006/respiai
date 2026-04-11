@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About — RespiAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <div class="disclaimer-bar">
+        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+        ⚠️ This tool is for informational purposes only. Always consult a certified medical professional.
+    </div>
+
+    <div class="respi-header text-center">
+        <div class="container">
+            <h2 class="fw-800"><i class="fa-solid fa-book-medical me-2"></i>Disease Encyclopedia</h2>
+            <p class="text-secondary">Learn about the 8 respiratory conditions RespiAI can detect</p>
+        </div>
+    </div>
+
+    <div class="container py-5">
+        <div class="row g-4">
+
+            {% set diseases = [
+                {'name': 'Normal', 'icon': '🫁', 'color': '#22c55e',
+                 'symptoms': 'Clear, even breathing sounds with no abnormalities.',
+                 'causes': 'N/A — Healthy respiratory function.',
+                 'treatment': 'Continue regular checkups and maintain lung health.'},
+                {'name': 'COPD', 'icon': '🌬️', 'color': '#f97316',
+                 'symptoms': 'Chronic cough, shortness of breath, wheezing, chest tightness.',
+                 'causes': 'Long-term exposure to irritants (smoking, pollution).',
+                 'treatment': 'Bronchodilators, inhaled steroids, pulmonary rehabilitation.'},
+                {'name': 'Pneumonia', 'icon': '🦠', 'color': '#ef4444',
+                 'symptoms': 'Fever, cough with phlegm, chest pain, difficulty breathing.',
+                 'causes': 'Bacterial, viral, or fungal infection of the lungs.',
+                 'treatment': 'Antibiotics, antiviral medication, rest, fluids.'},
+                {'name': 'Asthma', 'icon': '💨', 'color': '#f97316',
+                 'symptoms': 'Wheezing, shortness of breath, chest tightness, coughing.',
+                 'causes': 'Genetic factors, allergens, exercise, cold air.',
+                 'treatment': 'Rescue inhalers, long-term control medications.'},
+                {'name': 'Bronchiectasis', 'icon': '🫀', 'color': '#f97316',
+                 'symptoms': 'Chronic cough, large amounts of sputum, recurrent infections.',
+                 'causes': 'Repeated lung infections, cystic fibrosis, immune disorders.',
+                 'treatment': 'Airway clearance techniques, antibiotics, surgery (severe).'},
+                {'name': 'URTI', 'icon': '🤧', 'color': '#eab308',
+                 'symptoms': 'Runny nose, sore throat, cough, sneezing, mild fever.',
+                 'causes': 'Viral infections (rhinovirus, influenza).',
+                 'treatment': 'Rest, fluids, over-the-counter symptom relief.'},
+                {'name': 'LRTI', 'icon': '🤒', 'color': '#ef4444',
+                 'symptoms': 'Persistent cough, fever, rapid breathing, chest pain.',
+                 'causes': 'Bacterial or viral infection of lower airways.',
+                 'treatment': 'Antibiotics (bacterial), supportive care, hospitalization if severe.'},
+                {'name': 'Bronchiolitis', 'icon': '👶', 'color': '#eab308',
+                 'symptoms': 'Wheezing, rapid breathing, nasal congestion, cough (in infants).',
+                 'causes': 'RSV (Respiratory Syncytial Virus), common in children under 2.',
+                 'treatment': 'Supportive care, fluids, oxygen therapy if needed.'}
+            ] %}
+
+            {% for d in diseases %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="glass-card p-4 h-100 fade-in">
+                    <div class="d-flex align-items-center mb-3">
+                        <span style="font-size:2.5rem;" class="me-3">{{ d.icon }}</span>
+                        <h4 class="fw-bold mb-0" style="color: {{ d.color }};">{{ d.name }}</h4>
+                    </div>
+                    <div class="mb-2">
+                        <strong class="text-info small text-uppercase">Symptoms</strong>
+                        <p class="text-secondary small mb-2">{{ d.symptoms }}</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong class="text-info small text-uppercase">Causes</strong>
+                        <p class="text-secondary small mb-2">{{ d.causes }}</p>
+                    </div>
+                    <div>
+                        <strong class="text-info small text-uppercase">Treatment</strong>
+                        <p class="text-secondary small mb-0">{{ d.treatment }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="/" class="btn-glow">
+                <i class="fa-solid fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="respi-footer">
+        <p>⚕️ Information sourced from medical literature. Not a substitute for professional advice.</p>
+        <p class="mt-1 text-muted">© 2026 RespiAI</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

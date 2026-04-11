@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RespiAI — Respiratory Disease Detection</title>
+    <meta name="description" content="AI-powered respiratory disease detection from lung sounds. Detects COPD, Pneumonia, Asthma, and more.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- Disclaimer Banner -->
+    <div class="disclaimer-bar">
+        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+        ⚠️ This tool is for informational purposes only. Always consult a certified medical professional.
+    </div>
+
+    <!-- Animated Ambient Background Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <!-- Header -->
+    <div class="respi-header text-center">
+        <div class="container">
+            <div class="lung-icon mb-3">
+                <i class="fa-solid fa-lungs"></i>
+            </div>
+            <h1 class="display-5 fw-900"><span class="gradient-text">RespiAI</span></h1>
+            <p class="text-secondary mb-3">AI-Powered Respiratory Disease Detection</p>
+            <div class="status-badge">
+                <span class="dot"></span>
+                Model Active
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container py-5">
+
+        {% if error %}
+        <div class="row justify-content-center mb-4">
+            <div class="col-12 col-md-8 col-lg-6">
+                <div class="alert alert-danger border-0" style="background:rgba(239,68,68,0.1); color:#ef4444;">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i>{{ error }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row justify-content-center g-4">
+
+            <!-- Upload Panel -->
+            <div class="col-12 col-lg-6">
+                <div class="glass-card p-4 h-100 fade-in">
+                    <h4 class="text-center mb-4 fw-bold">
+                        <i class="fa-solid fa-file-audio text-info me-2"></i>Upload Audio
+                    </h4>
+
+                    <form id="upload-form" action="/predict" method="post" enctype="multipart/form-data">
+                        <div class="drop-zone mb-3" id="drop-zone">
+                            <div class="upload-icon">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <p class="mb-1 fw-semibold">Drag & drop lung sound file</p>
+                            <p class="text-muted small mb-0">or click to browse</p>
+                            <input type="file" name="file" id="file-input" accept="audio/*" hidden>
+                        </div>
+
+                        <canvas id="waveform-preview" style="width:100%; display:none; border-radius:12px; margin-bottom:1rem;"></canvas>
+
+                        <div id="file-info" style="display:none;"></div>
+
+                        <div class="d-flex gap-2 mt-3 mb-2">
+                            <span class="tech-badge"><i class="fa-solid fa-check me-1"></i>.wav</span>
+                            <span class="tech-badge"><i class="fa-solid fa-check me-1"></i>.mp3</span>
+                            <span class="tech-badge"><i class="fa-solid fa-check me-1"></i>.ogg</span>
+                            <span class="tech-badge">Max 16MB</span>
+                        </div>
+
+                        <button type="submit" class="btn-glow w-100 mt-3" id="analyze-btn">
+                            <i class="fa-solid fa-magnifying-glass-chart me-2"></i>Analyze Audio
+                        </button>
+                    </form>
+
+                    <div class="loader" id="loader">
+                        <div class="spinner mx-auto"></div>
+                        <p class="text-info mt-3 fw-semibold">Analyzing respiratory patterns...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Recording Panel -->
+            <div class="col-12 col-lg-6">
+                <div class="glass-card p-4 h-100 text-center d-flex flex-column align-items-center justify-content-center fade-in">
+                    <h4 class="mb-4 fw-bold">
+                        <i class="fa-solid fa-microphone-lines text-danger me-2"></i>Live Recording
+                    </h4>
+                    <p class="text-muted mb-4">Record 5 seconds of lung sounds using your microphone.</p>
+
+                    <button class="mic-btn" id="mic-btn">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+
+                    <p class="mt-3 mb-2 text-muted small" id="mic-status">Click to start recording</p>
+
+                    <!-- Real-time Siri Waveform -->
+                    <div class="waveform-container siri-glow mt-3 mx-auto" id="live-waveform-box" style="display:none; width: 140px; height: 140px; border-radius: 50%; padding: 0;">
+                        <canvas id="live-waveform" style="width:100%; height:100%; border-radius:50%;"></canvas>
+                    </div>
+
+                    <!-- Live Caption (Siri style) -->
+                    <p class="mt-4 mb-0 live-caption fw-semibold text-info" id="live-caption" style="display:none; font-size: 1.1rem; min-height: 28px; transition: all 0.3s;"></p>
+
+                    <div class="countdown-ring mt-3" id="countdown" style="display:none;">
+                        <svg width="120" height="120">
+                            <circle class="bg-ring" cx="60" cy="60" r="54"></circle>
+                            <circle class="progress-ring" id="progress-ring" cx="60" cy="60" r="54"></circle>
+                        </svg>
+                        <div class="countdown-num" id="countdown-num">5</div>
+                    </div>
+
+                    <div class="loader mt-3" id="mic-loader">
+                        <div class="spinner mx-auto"></div>
+                        <p class="text-danger mt-3 fw-semibold">Analyzing recording...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="glass-card mt-5 fade-in">
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-number" data-target="8" data-suffix="">0</div>
+                    <div class="stat-label">Diseases Detected</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-target="92" data-suffix="%+">0</div>
+                    <div class="stat-label">Model Accuracy</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-target="600" data-suffix="+">0</div>
+                    <div class="stat-label">Audio Features</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-target="126" data-suffix="+">0</div>
+                    <div class="stat-label">Patients Analyzed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Disease Cards -->
+        <h4 class="mt-5 mb-3 fw-bold"><i class="fa-solid fa-viruses text-info me-2"></i>Detectable Conditions</h4>
+        <div class="disease-scroll">
+            <div class="disease-card">
+                <div class="icon">🫁</div>
+                <h6>Normal</h6>
+                <p>Clear lung sounds, no abnormalities</p>
+            </div>
+            <div class="disease-card">
+                <div class="icon">🌬️</div>
+                <h6>COPD</h6>
+                <p>Chronic obstructive pulmonary disease</p>
+            </div>
+            <div class="disease-card">
+                <div class="icon">🦠</div>
+                <h6>Pneumonia</h6>
+                <p>Infection inflaming lung air sacs</p>
+            </div>
+            <div class="disease-card">
+                <div class="icon">💨</div>
+                <h6>Asthma</h6>
+                <p>Airway narrowing and swelling</p>
+            </div>
+            <div class="disease-card">
+                <div class="icon">🫀</div>
+                <h6>Bronchiectasis</h6>
+                <p>Permanent bronchi widening</p>
+            </div>
+            <div class="disease-card">
+                <div class="icon">🤧</div>
+                <h6>URTI</h6>
+                <p>Upper respiratory tract infection</p>
+            </div>
+            <div class="disease-card">
+                <div class="icon">🤒</div>
+                <h6>LRTI</h6>
+                <p>Lower respiratory tract infection</p>
+            </div>
+            <div class="disease-card">
+                <div class="icon">👶</div>
+                <h6>Bronchiolitis</h6>
+                <p>Small airway inflammation in children</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="respi-footer">
+        <p class="mb-2">⚕️ For informational purposes only. Not a medical diagnosis.</p>
+        <div>
+            <span class="tech-badge">Python</span>
+            <span class="tech-badge">Flask</span>
+            <span class="tech-badge">XGBoost</span>
+            <span class="tech-badge">LightGBM</span>
+            <span class="tech-badge">Librosa</span>
+            <span class="tech-badge">Bootstrap 5</span>
+        </div>
+        <p class="mt-2 text-muted">© 2026 RespiAI</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
