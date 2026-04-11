@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: respi-ai-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api_server:app --workers 2 --bind 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MODEL_PATH
+        value: models/best_respiratory_model.pkl
+      - key: SCALER_PATH
+        value: models/respiratory_scaler.pkl
+      - key: SELECTOR_PATH
+        value: models/respiratory_selector.pkl
+      - key: ENCODER_PATH
+        value: models/respiratory_encoder.pkl
+      - key: MAX_AUDIO_DURATION
+        value: "30"
+      - key: MIN_AUDIO_DURATION
+        value: "1"
+      - key: DEBUG
+        value: "False"

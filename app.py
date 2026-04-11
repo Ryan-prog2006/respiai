@@ -1,14 +1,13 @@
 """
-app.py — RespiAI Flask Application
+app.py — RespiAI Flask Application (UI layer for Vercel)
 
-Production-ready Flask backend with CORS, file validation,
-error handlers, and comprehensive API routes.
+Serves the frontend and proxies prediction requests to the
+ML API hosted on Render (set API_BASE_URL env var).
 """
 
 import os
 import json
-import librosa
-from io import BytesIO
+import requests
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -20,9 +19,8 @@ app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app)
 
-# Ensure directories exist
-os.makedirs(app.config.get('UPLOAD_FOLDER', 'data/audio'), exist_ok=True)
-os.makedirs(app.config.get('MODELS_FOLDER', 'models'), exist_ok=True)
+# ML API base URL — set this to your Render service URL
+API_BASE_URL = os.environ.get('API_BASE_URL', '').rstrip('/')
 
 
 def allowed_file(filename):
@@ -70,87 +68,52 @@ def predict():
     if not allowed_file(file.filename):
         return jsonify({"error": f"Invalid format. Allowed: {Config.ALLOWED_EXTENSIONS}"}), 400
 
+    if not API_BASE_URL:
+        return render_template('error.html', code=503,
+                               message="ML API not configured. Set API_BASE_URL environment variable."), 503
+
     try:
-        # Save temporarily for processing
-        filepath = os.path.join(Config.UPLOAD_FOLDER, file.filename)
-        file.save(filepath)
+        resp = requests.post(
+            f"{API_BASE_URL}/predict",
+            files={"file": (file.filename, file.stream, file.content_type)},
+            timeout=90
+        )
+        data = resp.json()
+        if resp.status_code != 200 or "error" in data:
+            error_msg = data.get("error", "Prediction failed.")
+            return render_template('index.html', error=error_msg)
 
-        # Validate duration
-        try:
-            duration = librosa.get_duration(path=filepath)
-            if duration < Config.MIN_AUDIO_DURATION or duration > Config.MAX_AUDIO_DURATION:
-                os.remove(filepath)
-                return jsonify({
-                    "error": f"Audio must be {Config.MIN_AUDIO_DURATION}-{Config.MAX_AUDIO_DURATION}s. Got {duration:.1f}s."
-                }), 400
-        except Exception as e:
-            os.remove(filepath)
-            return jsonify({"error": f"Cannot read audio: {str(e)}"}), 422
-
-        # Run prediction
-        from predict import predict_respiratory
-        result = predict_respiratory(filepath)
-
-        # Clean up
-        if os.path.exists(filepath):
-            os.remove(filepath)
-
-        if "error" in result:
-            return jsonify(result), 500
-
-        # Return HTML for form posts, JSON for API calls
+        result = data.get("result", data)
         if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
             return jsonify({"status": "success", "result": result})
         return render_template('result.html', result=result)
 
+    except requests.exceptions.Timeout:
+        return render_template('index.html', error="Analysis timed out. The model server may be waking up — please try again in 30 seconds.")
     except Exception as e:
-        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+        return render_template('index.html', error=f"Prediction failed: {str(e)}")
 
 
 @app.route('/predict-live', methods=['POST'])
 def predict_live():
-    """Handle browser-recorded audio blob from MediaRecorder."""
+    """Proxy browser-recorded audio to the ML API."""
     if 'audio' not in request.files:
         return jsonify({"error": "No audio data received."}), 400
 
+    if not API_BASE_URL:
+        return jsonify({"error": "ML API not configured. Set API_BASE_URL."}), 503
+
     audio_file = request.files['audio']
-    # Save with a safe filename
-    import uuid
-    ext = 'webm'
-    if audio_file.filename and '.' in audio_file.filename:
-        ext = audio_file.filename.rsplit('.', 1)[1].lower()
-    filename = f"live_{uuid.uuid4().hex[:8]}.{ext}"
-    filepath = os.path.join(Config.UPLOAD_FOLDER, filename)
-
     try:
-        audio_file.save(filepath)
-
-        # Validate duration
-        try:
-            duration = librosa.get_duration(path=filepath)
-            if duration < 0.5:
-                os.remove(filepath)
-                return jsonify({"error": f"Recording too short ({duration:.1f}s). Please try again."}), 400
-        except Exception as e:
-            os.remove(filepath)
-            return jsonify({"error": f"Cannot read recorded audio: {str(e)}"}), 422
-
-        # Run prediction
-        from predict import predict_respiratory
-        result = predict_respiratory(filepath)
-
-        # Clean up
-        if os.path.exists(filepath):
-            os.remove(filepath)
-
-        if "error" in result:
-            return jsonify({"error": result["error"]}), 500
-
-        return jsonify({"status": "success", "result": result})
-
+        resp = requests.post(
+            f"{API_BASE_URL}/predict",
+            files={"audio": (audio_file.filename or "live.webm", audio_file.stream, audio_file.content_type)},
+            timeout=90
+        )
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Analysis timed out. Please try again."}), 504
     except Exception as e:
-        if os.path.exists(filepath):
-            os.remove(filepath)
         return jsonify({"error": f"Live prediction failed: {str(e)}"}), 500
 
 
@@ -166,12 +129,13 @@ def render_result():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({
-        "status": "ok",
-        "model": "Ensemble",
-        "accuracy": "92%+",
-        "diseases": len(Config.DISEASES)
-    })
+    if API_BASE_URL:
+        try:
+            resp = requests.get(f"{API_BASE_URL}/health", timeout=10)
+            return jsonify(resp.json()), resp.status_code
+        except Exception:
+            pass
+    return jsonify({"status": "ok", "ui": "vercel", "api": API_BASE_URL or "not configured"})
 
 
 @app.route('/about')
