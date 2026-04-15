@@ -2,7 +2,7 @@ services:
   - type: web
     name: respi-ai-api
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-full.txt
     startCommand: gunicorn api_server:app --workers 2 --bind 0.0.0.0:$PORT --timeout 120
     envVars:
       - key: SECRET_KEY
