@@ -73,14 +73,17 @@ def predict():
                                message="ML API not configured. Set API_BASE_URL environment variable."), 503
 
     try:
+        file_bytes = file.read()
         resp = requests.post(
             f"{API_BASE_URL}/predict",
-            files={"file": (file.filename, file.stream, file.content_type)},
+            files={"file": (file.filename, file_bytes, file.content_type)},
             timeout=90
         )
         data = resp.json()
         if resp.status_code != 200 or "error" in data:
             error_msg = data.get("error", "Prediction failed.")
+            if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+                return jsonify({"error": error_msg}), resp.status_code
             return render_template('index.html', error=error_msg)
 
         result = data.get("result", data)
@@ -89,9 +92,15 @@ def predict():
         return render_template('result.html', result=result)
 
     except requests.exceptions.Timeout:
-        return render_template('index.html', error="Analysis timed out. The model server may be waking up — please try again in 30 seconds.")
+        error_msg = "Analysis timed out. The model server may be waking up \u2014 please try again in 30 seconds."
+        if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+            return jsonify({"error": error_msg}), 504
+        return render_template('index.html', error=error_msg)
     except Exception as e:
-        return render_template('index.html', error=f"Prediction failed: {str(e)}")
+        error_msg = f"Prediction failed: {str(e)}"
+        if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+            return jsonify({"error": error_msg}), 500
+        return render_template('index.html', error=error_msg)
 
 
 @app.route('/predict-live', methods=['POST'])
@@ -105,9 +114,10 @@ def predict_live():
 
     audio_file = request.files['audio']
     try:
+        audio_bytes = audio_file.read()
         resp = requests.post(
             f"{API_BASE_URL}/predict",
-            files={"audio": (audio_file.filename or "live.webm", audio_file.stream, audio_file.content_type)},
+            files={"audio": (audio_file.filename or "live.webm", audio_bytes, audio_file.content_type)},
             timeout=90
         )
         return jsonify(resp.json()), resp.status_code
